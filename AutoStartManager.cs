@@ -210,7 +210,7 @@ namespace DzfpPdfPrinter
                 info.Add("");
                 info.Add("提示:");
                 info.Add("- 勾选'开机自启动'复选框即可启用");
-                info.Add("- 程序将以最小化模式启动");
+                info.Add("- 程序将在系统托盘中运行");
             }
 
             info.Add("");

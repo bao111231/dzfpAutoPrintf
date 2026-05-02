@@ -21,14 +21,26 @@ namespace DzfpPdfPrinter
         private CheckBox? chkAutoStart;
         private ComboBox? cmbPrintScale;
         private Label? lblPrintScale;
+        private NotifyIcon? notifyIcon;
+        private ContextMenuStrip? trayMenu;
+        private bool _startMinimized;
 
-        public MainForm()
+        public MainForm(bool startMinimized = false)
         {
+            _startMinimized = startMinimized;
             InitializeComponent();
+            InitializeTrayIcon();
             LoadPrinters();
             LoadSettings();
             CheckPdfPrintTools();
             LoadPrintScaleSetting();
+            
+            if (_startMinimized)
+            {
+                this.WindowState = FormWindowState.Minimized;
+                this.ShowInTaskbar = false;
+                this.Visible = false;
+            }
         }
 
         private void InitializeComponent()
@@ -236,6 +248,70 @@ namespace DzfpPdfPrinter
             this.Controls.Add(pnlBottom);
 
             this.FormClosing += MainForm_FormClosing!;
+        }
+
+        private void InitializeTrayIcon()
+        {
+            notifyIcon = new NotifyIcon
+            {
+                Icon = SystemIcons.Application,
+                Text = "DZFP PDF 自动打印工具",
+                Visible = true
+            };
+
+            trayMenu = new ContextMenuStrip();
+            
+            var showItem = new ToolStripMenuItem("显示主窗口", null, (s, e) => ShowMainWindow());
+            var startStopItem = new ToolStripMenuItem("开始监控", null, (s, e) => 
+            {
+                if (_monitorService?.IsMonitoring == true)
+                    StopMonitoring();
+                else
+                    _ = StartMonitoringAsync();
+            });
+            
+            var separator1 = new ToolStripSeparator();
+            var exitItem = new ToolStripMenuItem("退出", null, (s, e) => ExitApplication());
+
+            trayMenu.Items.AddRange(new ToolStripItem[] { showItem, startStopItem, separator1, exitItem });
+            
+            notifyIcon.ContextMenuStrip = trayMenu;
+            notifyIcon.DoubleClick += (s, e) => ShowMainWindow();
+            
+            notifyIcon.BalloonTipTitle = "DZFP PDF 自动打印工具";
+            notifyIcon.BalloonTipText = "程序已在系统托盘中运行，双击图标显示主窗口";
+            if (_startMinimized)
+            {
+                notifyIcon.ShowBalloonTip(3000);
+            }
+        }
+
+        private void ShowMainWindow()
+        {
+            this.ShowInTaskbar = true;
+            this.Visible = true;
+            this.WindowState = FormWindowState.Normal;
+            this.Activate();
+            this.BringToFront();
+        }
+
+        private void HideToTray()
+        {
+            this.WindowState = FormWindowState.Minimized;
+            this.ShowInTaskbar = false;
+            this.Visible = false;
+        }
+
+        private void ExitApplication()
+        {
+            if (_monitorService?.IsMonitoring == true)
+            {
+                _monitorService.StopMonitoring();
+            }
+            
+            notifyIcon?.Dispose();
+            trayMenu?.Dispose();
+            Application.Exit();
         }
 
         private void LoadPrinters()
@@ -759,7 +835,7 @@ namespace DzfpPdfPrinter
                     AddLog("✓ 已启用开机自启动", Color.Green);
                     
                     MessageBox.Show(
-                        "已启用开机自启动！\n\n下次开机时程序将自动以最小化模式运行。",
+                        "已启用开机自启动！\n\n下次开机时程序将在系统托盘中运行。",
                         "成功",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information
@@ -823,23 +899,52 @@ namespace DzfpPdfPrinter
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (_monitorService?.IsMonitoring == true)
+            if (e.CloseReason == CloseReason.UserClosing)
             {
                 var result = MessageBox.Show(
-                    "监控正在运行中，确定要退出吗？",
-                    "确认退出",
+                    "确定要退出吗？\n\n点击【否】可最小化到系统托盘继续运行。",
+                    "确认",
                     MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question
+                    MessageBoxIcon.Question,
+                    MessageBoxDefaultButton.Button2
                 );
 
                 if (result == DialogResult.No)
                 {
                     e.Cancel = true;
+                    HideToTray();
                     return;
                 }
 
-                _monitorService.StopMonitoring();
+                if (_monitorService?.IsMonitoring == true)
+                {
+                    var confirmResult = MessageBox.Show(
+                        "监控正在运行中，确定要退出吗？",
+                        "确认退出",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question
+                    );
+
+                    if (confirmResult == DialogResult.No)
+                    {
+                        e.Cancel = true;
+                        HideToTray();
+                        return;
+                    }
+                    
+                    _monitorService.StopMonitoring();
+                }
             }
+            else
+            {
+                if (_monitorService?.IsMonitoring == true)
+                {
+                    _monitorService.StopMonitoring();
+                }
+            }
+            
+            notifyIcon?.Dispose();
+            trayMenu?.Dispose();
         }
     }
 }
