@@ -1,0 +1,32 @@
+## 编译输出
+bin/
+obj/
+publish/
+publish-lightweight/
+
+## 用户特定文件
+*.user
+*.suo
+*.cache
+
+## VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+## Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.tmp
+*.temp
+
+## 日志和调试文件
+*.log
+.DS_Store
+
+## 临时文件
+*.swp
+*~
