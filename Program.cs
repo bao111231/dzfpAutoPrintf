@@ -9,7 +9,8 @@ namespace DzfpPdfPrinter
         {
             ApplicationConfiguration.Initialize();
             var startMinimized = args.Contains("-minimized");
-            Application.Run(new MainForm(startMinimized));
+            var autoStartMonitor = args.Contains("-autostart");
+            Application.Run(new MainForm(startMinimized, autoStartMonitor));
         }
     }
 }

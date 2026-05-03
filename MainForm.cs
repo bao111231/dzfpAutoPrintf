@@ -24,10 +24,12 @@ namespace DzfpPdfPrinter
         private NotifyIcon? notifyIcon;
         private ContextMenuStrip? trayMenu;
         private bool _startMinimized;
+        private bool _autoStartMonitor;
 
-        public MainForm(bool startMinimized = false)
+        public MainForm(bool startMinimized = false, bool autoStartMonitor = false)
         {
             _startMinimized = startMinimized;
+            _autoStartMonitor = autoStartMonitor;
             InitializeComponent();
             InitializeTrayIcon();
             LoadPrinters();
@@ -40,6 +42,15 @@ namespace DzfpPdfPrinter
                 this.WindowState = FormWindowState.Minimized;
                 this.ShowInTaskbar = false;
                 this.Visible = false;
+            }
+
+            if (_autoStartMonitor)
+            {
+                this.Shown += async (s, e) => 
+                {
+                    await Task.Delay(2000);
+                    await StartMonitoringAsync();
+                };
             }
         }
 
@@ -463,23 +474,39 @@ namespace DzfpPdfPrinter
         {
             if (string.IsNullOrWhiteSpace(txtDirectory?.Text))
             {
-                MessageBox.Show(
-                    "请先选择要监控的目录！", 
-                    "提示", 
-                    MessageBoxButtons.OK, 
-                    MessageBoxIcon.Warning
-                );
+                if (_autoStartMonitor)
+                {
+                    AddLog("[自启动] 未设置监控目录，跳过自动监控", Color.Orange);
+                    notifyIcon?.ShowBalloonTip(5000, "DZFP PDF 打印工具", "未设置监控目录，请手动配置后启动", ToolTipIcon.Warning);
+                }
+                else
+                {
+                    MessageBox.Show(
+                        "请先选择要监控的目录！", 
+                        "提示", 
+                        MessageBoxButtons.OK, 
+                        MessageBoxIcon.Warning
+                    );
+                }
                 return;
             }
 
             if (!Directory.Exists(txtDirectory.Text))
             {
-                MessageBox.Show(
-                    "选择的目录不存在！", 
-                    "错误", 
-                    MessageBoxButtons.OK, 
-                    MessageBoxIcon.Error
-                );
+                if (_autoStartMonitor)
+                {
+                    AddLog($"[自启动] 监控目录不存在: {txtDirectory.Text}", Color.Red);
+                    notifyIcon?.ShowBalloonTip(5000, "DZFP PDF 打印工具", $"监控目录不存在: {txtDirectory.Text}", ToolTipIcon.Error);
+                }
+                else
+                {
+                    MessageBox.Show(
+                        "选择的目录不存在！", 
+                        "错误", 
+                        MessageBoxButtons.OK, 
+                        MessageBoxIcon.Error
+                    );
+                }
                 return;
             }
 
@@ -536,13 +563,32 @@ namespace DzfpPdfPrinter
                 });
 
                 UpdateUIForMonitoring(true);
-                AddLog($"✓ 监控已启动: {txtDirectory.Text}", Color.DarkGreen);
+                
+                if (_autoStartMonitor)
+                {
+                    AddLog($"[自启动] ✓ 监控已自动启动: {txtDirectory.Text}", Color.DarkGreen);
+                    notifyIcon!.Text = "DZFP PDF 打印工具 - 监控中";
+                    notifyIcon.ShowBalloonTip(3000, "DZFP PDF 打印工具", $"监控已自动启动\n目录: {txtDirectory.Text}", ToolTipIcon.Info);
+                }
+                else
+                {
+                    AddLog($"✓ 监控已启动: {txtDirectory.Text}", Color.DarkGreen);
+                }
+                
                 AddLog("   等待新的 dzfp_*.pdf 文件...", Color.Gray);
                 SaveSettings();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"启动失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                if (_autoStartMonitor)
+                {
+                    AddLog($"[自启动] 启动失败: {ex.Message}", Color.Red);
+                    notifyIcon?.ShowBalloonTip(5000, "DZFP PDF 打印工具", $"监控启动失败: {ex.Message}", ToolTipIcon.Error);
+                }
+                else
+                {
+                    MessageBox.Show($"启动失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
                 UpdateUIForMonitoring(false);
             }
             finally

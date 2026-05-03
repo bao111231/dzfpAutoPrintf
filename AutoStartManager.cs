@@ -40,9 +40,7 @@ namespace DzfpPdfPrinter
                 }
 
                 using var runKey = Registry.CurrentUser.OpenSubKey(RegistryPath, true);
-                runKey?.SetValue(AppName, $"\"{exePath}\" -minimized", RegistryValueKind.String);
-
-                CreateStartupShortcut(exePath);
+                runKey?.SetValue(AppName, $"\"{exePath}\" -minimized -autostart", RegistryValueKind.String);
                 
                 SaveAutoStartSetting(true);
                 
@@ -215,8 +213,9 @@ namespace DzfpPdfPrinter
 
             info.Add("");
             info.Add("说明:");
-            info.Add("- 使用注册表方式（推荐）");
-            info.Add("- 同时在启动文件夹创建快捷方式作为备份");
+            info.Add("- 使用注册表方式启动");
+            info.Add("- 启动参数: -minimized -autostart");
+            info.Add("- 程序将在系统托盘中运行并自动开始监控");
 
             return string.Join(System.Environment.NewLine, info);
         }
