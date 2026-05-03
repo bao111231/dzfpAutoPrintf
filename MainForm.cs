@@ -46,11 +46,17 @@ namespace DzfpPdfPrinter
 
             if (_autoStartMonitor)
             {
-                this.Shown += async (s, e) => 
+                var autoStartTimer = new System.Windows.Forms.Timer();
+                autoStartTimer.Interval = 3000;
+                autoStartTimer.Tick += async (s, e) => 
                 {
-                    await Task.Delay(2000);
+                    autoStartTimer.Stop();
+                    autoStartTimer.Dispose();
                     await StartMonitoringAsync();
                 };
+                autoStartTimer.Start();
+                
+                AddLog("[自启动] 程序将在3秒后自动开始监控...", Color.Gray);
             }
         }
 
